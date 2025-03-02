@@ -23,7 +23,7 @@ steps:
   displayName: 'Publish Scripts as Artifact'
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: '$(Pipeline.Workspace)/scripts'
+    targetPath: '$(Build.SourcesDirectory)/scripts'
     artifact: 'artifact-2'
     publishLocation: 'pipeline'
   displayName: 'Publish second test artifact'
