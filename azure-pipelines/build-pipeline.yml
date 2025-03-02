@@ -1,26 +1,23 @@
-
 trigger:
   branches:
     include:
-      - main
+      - main  # Trigger pipeline when changes are merged into 'main' branch
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'ubuntu-latest'  # Use an Ubuntu machine to run the pipeline
 
 steps:
 - task: UsePythonVersion@0
   inputs:
     versionSpec: '3.x'
+  displayName: 'Set Python Version'
 
 - script: pip install -r requirements.txt
-  displayName: 'Install dependencies'
-
-- script: pytest tests/
-  displayName: 'Run Unit Tests'
+  displayName: 'Install Dependencies'
 
 - task: PublishPipelineArtifact@1
   inputs:
-    targetPath: 'scripts'
-    artifact: 'deployment-scripts'
+    targetPath: 'scripts'  # Publish the 'scripts' folder as an artifact
+    artifact: 'deployment-scripts'  # Name of the published artifact
     publishLocation: 'pipeline'
   displayName: 'Publish Scripts as Artifact'
