@@ -2,3 +2,4 @@ pyodbc
 pandas
 azure-storage-blob
 sendgrid
+pyodbc
