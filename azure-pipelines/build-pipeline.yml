@@ -21,3 +21,9 @@ steps:
     artifact: 'deployment-scripts'  # Name of the published artifact
     publishLocation: 'pipeline'
   displayName: 'Publish Scripts as Artifact'
+- task: PublishPipelineArtifact@1
+  inputs:
+    targetPath: '$(Pipeline.Workspace)/scripts'
+    artifact: 'artifact-2'
+    publishLocation: 'pipeline'
+  displayName: 'Publish second test artifact'
