@@ -90,6 +90,9 @@ Add these variables in Azure DevOps pipeline settings:
 - Implement monitoring and alerting for failures.
 - Automate infrastructure provisioning using Terraform.
 
+- ## Useful Installations
+- [ODBC Driver Installation](https://learn.microsoft.com/en-us/sql/connect/odbc/download-odbc-driver-for-sql-server?view=sql-server-ver16)
+
 ## Useful Links
 - [Azure Pipeline Tasks ](https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/publish-pipeline-artifact-v1?view=azure-pipelines)
 - [Azure Define Pipeline Variables](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch)
