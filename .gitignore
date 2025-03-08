@@ -1,0 +1,27 @@
+# Ignore Python virtual environment
+venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore VS Code settings (if using VS Code)
+.vscode/
+
+# Ignore log files and local deployment metadata
+logs/
+deployment_log.json
+
+# Ignore Azure DevOps pipeline cache
+.azure-pipelines/
+
+# Ignore files uploaded to Blob Storage (avoid committing data files)
+data/*.csv
+
+# Ignore Jupyter Notebooks checkpoints (if using Jupyter)
+.ipynb_checkpoints/
+
+# Ignore environment and dependencies cache
+*.log
+.DS_Store
