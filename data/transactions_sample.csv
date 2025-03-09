@@ -1,1 +1,6 @@
-sample,file name,test date
+transaction_id,customer_name,amount,currency,transaction_date
+1001,John Doe,250.75,USD,2024-03-02
+1002,Jane Smith,100.50,GBP,2024-03-01
+1003,David Johnson,500.00,EUR,2024-02-28
+1004,Emily Brown,75.25,USD,2024-02-27
+1005,Michael Lee,320.00,GBP,2024-02-26
