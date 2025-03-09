@@ -1,12 +1,21 @@
 import pyodbc
 import os
 import sys
+from dotenv import load_dotenv
 
-# Fetch database credentials from environment variables
-DB_SERVER = "devops-austine.database.windows.net"
-DB_NAME = "devops-db"
-DB_USER = "devops-admin"
-DB_PASSWORD = "Password12345678!"
+load_dotenv()  # Load environment variables from .env file
+DB_SERVER = os.getenv("DB_SERVER")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+if not DB_SERVER or not DB_NAME or not DB_USER or not DB_PASSWORD:
+    raise ValueError("Error: AZURE_SAS_TOKEN environment variable not set.")
+
+# # Fetch database credentials from environment variables
+# DB_SERVER = "devops-austine.database.windows.net"
+# DB_NAME = "devops-db"
+# DB_USER = "devops-admin"
+# DB_PASSWORD = "Password12345678!"
 
 # DB_SERVER = os.getenv("devops-austine.database.windows.net")
 # DB_NAME = os.getenv("devops-db")
