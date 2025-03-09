@@ -96,7 +96,7 @@ Add these variables in Azure DevOps pipeline settings:
 ## Useful Links
 - [Azure Pipeline Tasks ](https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/publish-pipeline-artifact-v1?view=azure-pipelines)
 - [Azure Define Pipeline Variables](https://learn.microsoft.com/en-us/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch)
-
+- [Azure Blob Documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-python-get-started?tabs=sas-token)
 ## License
 
 MIT License
