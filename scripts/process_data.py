@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import pyodbc
 import io
+import json
+import datetime
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
 
@@ -24,6 +26,33 @@ DB_TABLE_NAME = "Transactions"
 
 # SQL Server Connection string
 conn_str = f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={DB_SERVER};DATABASE={DB_NAME};UID={DB_USER};PWD={DB_PASSWORD}"
+
+DEPLOYMENT_LOG_FILE = "deployment_log.json"
+
+def update_deployment_log(new_data):
+    """Append new deployment data to a JSON log file as a list of deployments."""
+    log_data = {"deployments": []}  # Default structure
+
+    # Check if the deployment log file exists and load existing data
+    if os.path.exists(DEPLOYMENT_LOG_FILE):
+        with open(DEPLOYMENT_LOG_FILE, "r") as file:
+            try:
+                log_data = json.load(file)
+            except json.JSONDecodeError:
+                print("Warning: Corrupted JSON file, resetting log.")
+
+    # Ensure 'deployments' key exists and is a list
+    if "deployments" not in log_data or not isinstance(log_data["deployments"], list):
+        log_data["deployments"] = []
+
+    # Append the new deployment entry
+    log_data["deployments"].append(new_data)
+
+    # Write updated log data back to the file
+    with open(DEPLOYMENT_LOG_FILE, "w") as file:
+        json.dump(log_data, file, indent=4)
+
+    print("Deployment log updated successfully.")
 
 def fetch_csv_from_blob():
     """Retrieve CSV files from Azure Blob Storage and return a list of dataframes."""
@@ -57,6 +86,8 @@ def fetch_csv_from_blob():
 
 def insert_data_into_db(dataframes):
     """Insert data from CSV files into Azure SQL Database."""
+    rows = 0
+    inserted_records = []
     if not dataframes:
         print("No data to insert into the database.")
         return
@@ -71,9 +102,22 @@ def insert_data_into_db(dataframes):
                         INSERT INTO {DB_TABLE_NAME} (transaction_id, customer_name, amount, currency, transaction_date)
                         VALUES (?, ?, ?, ?, ?)
                     """, row["transaction_id"], row["customer_name"], row["amount"], row["currency"], row["transaction_date"])
+                    rows += 1
 
             conn.commit()
+
+            # Generate a timestamp in UTC format
+            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            # Update deployment log
+            inserted_records.append({
+                "inserted_rows": rows,
+                "timestamp": timestamp
+            })
+            update_deployment_log({"inserted_records": inserted_records})
+            
             print("Data inserted successfully!")
+        
+
 
     except Exception as e:
         print(f"Error inserting data into database: {e}")
