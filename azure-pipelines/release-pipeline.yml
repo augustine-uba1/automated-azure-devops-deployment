@@ -24,18 +24,19 @@ jobs:
   pool:
     vmImage: 'ubuntu-latest'
   steps:
-  - checkout: self
-
-  #  Download the zip artifact
   - download: current
     artifact: DeploymentPackage
 
-  #  Extract the deployment package
-  - script: |
-      mkdir -p $(Pipeline.Workspace)/deployment
-      unzip $(Pipeline.Workspace)/DeploymentPackage/deployment_package_*.zip -d $(Pipeline.Workspace)/deployment
-      ls -R $(Pipeline.Workspace)/deployment  #  Debugging: List extracted contents
+  - task: ExtractFiles@1
     displayName: 'Extract Deployment Package'
+    inputs:
+      archiveFilePatterns: '**/*.zip'
+      destinationFolder: '$(System.DefaultWorkingDirectory)/deployment'
+
+  - script: |
+      echo "Checking extracted contents..."
+      ls -R $(System.DefaultWorkingDirectory)/deployment
+    displayName: "Debug: List Extracted Deployment Files"
 
 # - job: SmokeTest
 #   displayName: "Run Smoke Test"
@@ -46,29 +47,43 @@ jobs:
 #   - task: UsePythonVersion@0
 #     inputs:
 #       versionSpec: '3.x'
-#   - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
+#   - script: |
+#       REQUIREMENTS_FILE=$(find $(System.DefaultWorkingDirectory)/deployment -name "requirements.txt")
+#       if [ -f "$REQUIREMENTS_FILE" ]; then
+#           pip install -r $REQUIREMENTS_FILE
+#       else
+#           echo "Error: requirements.txt not found!"
+#           exit 1
+#       fi
 #     displayName: 'Install Dependencies'
-#   - script: python $(Pipeline.Workspace)/deployment/scripts/smoke_test.py
+#   - script: python $(System.DefaultWorkingDirectory)/deployment/scripts/smoke_test.py
 #     displayName: 'Run Smoke Test on Database'
 #     env:
 #       AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
 
 - job: UploadToBlob
   displayName: "Upload Files"
-  # dependsOn: SmokeTest
+  dependsOn: SetEnvironmentVariables
   pool:
     vmImage: 'ubuntu-latest'
   steps:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.x'
-  - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
+  - script: |
+      REQUIREMENTS_FILE=$(find $(System.DefaultWorkingDirectory)/deployment -name "requirements.txt")
+      if [ -f "$REQUIREMENTS_FILE" ]; then
+          pip install -r $REQUIREMENTS_FILE
+      else
+          echo "Error: requirements.txt not found!"
+          exit 1
+      fi
     displayName: 'Install Dependencies'
-  - script: python $(Pipeline.Workspace)/deployment/scripts/upload_to_blob.py
+  - script: python $(System.DefaultWorkingDirectory)/deployment/scripts/upload_to_blob.py
     displayName: 'Upload Files to Blob Storage'
     env:
       AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
-
+      
 # - job: InsertIntoDatabase
 #   displayName: "Process Data"
 #   dependsOn: UploadToBlob
@@ -79,7 +94,7 @@ jobs:
 #     inputs:
 #       versionSpec: '3.x'
 
-#   #  Install ODBC Driver 18 for SQL Server
+#   # Install ODBC Driver 18 for SQL Server
 #   - script: |
 #       sudo su
 #       sudo apt-get update
@@ -92,9 +107,16 @@ jobs:
 #       sudo apt-get install -y libunwind8
 #     displayName: 'Install ODBC Driver 18 for SQL Server'
 
-#   - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
+#   - script: |
+#       REQUIREMENTS_FILE=$(find $(System.DefaultWorkingDirectory)/deployment -name "requirements.txt")
+#       if [ -f "$REQUIREMENTS_FILE" ]; then
+#           pip install -r $REQUIREMENTS_FILE
+#       else
+#           echo "Error: requirements.txt not found!"
+#           exit 1
+#       fi
 #     displayName: 'Install Dependencies'
-#   - script: python $(Pipeline.Workspace)/deployment/scripts/process_data.py
+#   - script: python $(System.DefaultWorkingDirectory)/deployment/scripts/process_data.py
 #     displayName: 'Read Blob & Insert Data into Database'
 #     env:
 #       DB_SERVER: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.DB_SERVER'])
@@ -111,11 +133,20 @@ jobs:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.x'
-  - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
+  - script: |
+      REQUIREMENTS_FILE=$(find $(System.DefaultWorkingDirectory)/deployment -name "requirements.txt")
+      if [ -f "$REQUIREMENTS_FILE" ]; then
+          pip install -r $REQUIREMENTS_FILE
+      else
+          echo "Error: requirements.txt not found!"
+          exit 1
+      fi
     displayName: 'Install Dependencies'
-  - script: python $(Pipeline.Workspace)/deployment/scripts/generate_release_note.py
+  - script: python $(System.DefaultWorkingDirectory)/deployment/scripts/generate_release_note.py
     displayName: 'Generate Release Note'
     env:
       AZURE_STORAGE_CONNECTION_STRING: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_STORAGE_CONNECTION_STRING'])
       AZURE_SAS_RELEASE_NOTE: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_RELEASE_NOTE'])
       AZURE_RELEASE_NOTES_CONTAINER: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_RELEASE_NOTES_CONTAINER'])
+  - script: python $(System.DefaultWorkingDirectory)/deployment/scripts/send_email.py
+    displayName: 'Send Email Notification'
