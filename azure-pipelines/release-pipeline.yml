@@ -16,8 +16,9 @@ jobs:
       echo "##vso[task.setvariable variable=DB_NAME;isOutput=true]$(DB_NAME)"
       echo "##vso[task.setvariable variable=DB_USER;isOutput=true]$(DB_USER)"
       echo "##vso[task.setvariable variable=DB_PASSWORD;isOutput=true;isSecret=true]$(DB_PASSWORD)"
+    name: SetEnvStep  # ✅ Defines the step name, so other jobs can reference its output
     displayName: 'Set Environment Variables Globally'
-  name: SetEnv  # ✅ Assign a job name so outputs can be referenced
+
 - job: SmokeTest
   displayName: "Run Smoke Test"
   dependsOn: SetEnvironmentVariables
@@ -34,7 +35,7 @@ jobs:
   - script: python $(Pipeline.Workspace)/deployment-scripts/smoke_test.py
     displayName: 'Run Smoke Test on Database'
     env:
-      AZURE_SAS_TOKEN: $(SetEnv.AZURE_SAS_TOKEN)
+      AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
 
 - job: UploadToBlob
   displayName: "Upload Files"
@@ -52,9 +53,9 @@ jobs:
   - script: python $(Pipeline.Workspace)/deployment-scripts/upload_to_blob.py
     displayName: 'Upload Files to Blob Storage'
     env:
-      AZURE_SAS_TOKEN: $(SetEnv.AZURE_SAS_TOKEN)
-      AZURE_STORAGE_CONNECTION_STRING: $(SetEnv.AZURE_STORAGE_CONNECTION_STRING)
-      AZURE_BLOB_CONTAINER_NAME: $(SetEnv.AZURE_BLOB_CONTAINER_NAME)
+      AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
+      AZURE_STORAGE_CONNECTION_STRING: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_STORAGE_CONNECTION_STRING'])
+      AZURE_BLOB_CONTAINER_NAME: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_BLOB_CONTAINER_NAME'])
 
 - job: InsertIntoDatabase
   displayName: "Process Data"
@@ -72,10 +73,10 @@ jobs:
   - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
     displayName: 'Read Blob & Insert Data into Database'
     env:
-      DB_SERVER: $(SetEnv.DB_SERVER)
-      DB_NAME: $(SetEnv.DB_NAME)
-      DB_USER: $(SetEnv.DB_USER)
-      DB_PASSWORD: $(SetEnv.DB_PASSWORD)
+      DB_SERVER: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.DB_SERVER'])
+      DB_NAME: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.DB_NAME'])
+      DB_USER: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.DB_USER'])
+      DB_PASSWORD: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.DB_PASSWORD'])
 
 - job: GenerateReleaseNote
   displayName: "Generate Release Note & Notify"
@@ -93,8 +94,7 @@ jobs:
   - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
     displayName: 'Generate Release Note'
     env:
-      AZURE_SAS_TOKEN: $(SetEnv.AZURE_SAS_TOKEN)
-      AZURE_SAS_RELEASE_NOTE: $(SetEnv.AZURE_SAS_RELEASE_NOTE)
-      AZURE_RELEASE_NOTES_CONTAINER: $(SetEnv.AZURE_RELEASE_NOTES_CONTAINER)
-  - script: python $(Pipeline.Workspace)/deployment-scripts/send_email.py
-    displayName: 'Send Email Notification'
+      AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
+      AZURE_SAS_RELEASE_NOTE: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_RELEASE_NOTE'])
+      AZURE_RELEASE_NOTES_CONTAINER: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_RELEASE_NOTES_CONTAINER'])
+
