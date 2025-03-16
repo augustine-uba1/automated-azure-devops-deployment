@@ -1,0 +1,62 @@
+trigger: none  # Manual trigger, but will be triggered by the build pipeline
+
+resources:
+  pipelines:
+    - pipeline: buildPipeline  # Name of the build pipeline resource
+      source: augustine-uba1.automated-azure-devops-deployment  # Name of the build pipeline
+      trigger:
+        branches:
+          include:
+            - main  # Trigger when the build pipeline runs on 'main'
+
+stages:
+- stage: SmokeTest
+  jobs:
+  - job: CheckDatabase
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - download: buildPipeline  # Download the artifact from the build pipeline
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '3.x'
+    - script: python $(Pipeline.Workspace)/deployment-scripts/smoke_test.py
+      displayName: 'Run Smoke Test on Database'
+
+- stage: UploadFiles
+  jobs:
+  - job: UploadToBlob
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - download: buildPipeline  # Get scripts from the build pipeline
+    - script: python $(Pipeline.Workspace)/deployment-scripts/upload_to_blob.py
+      displayName: 'Upload Files to Blob Storage'
+
+- stage: ProcessData
+  dependsOn: UploadFiles
+  jobs:
+  - job: InsertIntoDatabase
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - download: buildPipeline
+    - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
+      displayName: 'Read Blob & Insert Data into Database'
+
+- stage: ReleaseNote
+  dependsOn: ProcessData
+  jobs:
+  - job: GenerateNote
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - checkout: self
+    - download: buildPipeline
+    - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
+      displayName: 'Generate Release Note'
+    - script: python $(Pipeline.Workspace)/deployment-scripts/send_email.py
+      displayName: 'Send Email Notification'
