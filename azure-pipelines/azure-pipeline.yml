@@ -3,6 +3,9 @@ trigger:
     include:
       - main  # Trigger pipeline when changes are merged into 'main' branch
 
+variables:
+  - group: DeploymentVariables
+  
 pool:
   vmImage: 'ubuntu-latest'  # Use an Ubuntu machine to run the pipeline
 
