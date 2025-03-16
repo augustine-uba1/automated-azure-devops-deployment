@@ -55,7 +55,7 @@ jobs:
 
 - job: UploadToBlob
   displayName: "Upload Files"
-  dependsOn: SmokeTest
+  # dependsOn: SmokeTest
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -104,7 +104,7 @@ jobs:
 
 - job: GenerateReleaseNote
   displayName: "Generate Release Note & Notify"
-  dependsOn: InsertIntoDatabase
+  dependsOn: UploadToBlob
   pool:
     vmImage: 'ubuntu-latest'
   steps:
