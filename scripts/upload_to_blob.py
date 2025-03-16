@@ -69,8 +69,9 @@ def upload_csv_files(blob_service_client: BlobServiceClient):
 
         # Get the absolute path to the 'data' folder (one level up from the script)
         script_dir = os.path.dirname(os.path.abspath(__file__))  # Path to 'Scripts'
-        data_folder = os.path.join(script_dir, "..", "data")  # Move up and into 'data'
-        data_folder = os.path.abspath(data_folder)  # Normalize path
+        data_folder = os.path.abspath(os.path.join(script_dir, "..", "data"))
+        # data_folder = os.path.join(script_dir, "..", "data")  # Move up and into 'data'
+        # data_folder = os.path.abspath(data_folder)  # Normalize path
 
         if not os.path.exists(data_folder):
             print(f"Error: Data folder '{data_folder}' not found.")

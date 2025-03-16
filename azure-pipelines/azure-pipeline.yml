@@ -5,7 +5,7 @@ trigger:
 
 variables:
   - group: DeploymentVariables
-  
+
 pool:
   vmImage: 'ubuntu-latest'  # Use an Ubuntu machine to run the pipeline
 
@@ -23,12 +23,27 @@ stages:
     - script: pip install -r requirements.txt
       displayName: 'Install Dependencies'
 
-    - task: PublishPipelineArtifact@1
+    - task: ArchiveFiles@2
       inputs:
-        targetPath: 'scripts'  # Publish the 'scripts' folder as an artifact
-        artifact: 'deployment-scripts'  # Name of the published artifact
-        publishLocation: 'pipeline'
-      displayName: 'Publish Scripts as Artifact'
+        rootFolderOrFile: '$(Build.SourcesDirectory)'  # Archive the entire source folder
+        includeRootFolder: false
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/deployment_package_$(Build.BuildId).zip'
+        replaceExistingArchive: true
+      displayName: 'Create Deployment Archive'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        artifactName: 'DeploymentPackage'  # ✅ Single artifact containing everything
+        targetPath: '$(Build.ArtifactStagingDirectory)/deployment_package_$(Build.BuildId).zip'
+      displayName: 'Publish Deployment Package'
+    #  # Publish Python scripts
+    # - task: PublishPipelineArtifact@1
+    #   inputs:
+    #     targetPath: 'scripts'  # Publish the 'scripts' folder as an artifact
+    #     artifact: 'deployment-scripts'  # Name of the published artifact
+    #     publishLocation: 'pipeline'
+    #   displayName: 'Publish Scripts as Artifact'
 
 - stage: Deploy
   displayName: "Deploy and Release"
