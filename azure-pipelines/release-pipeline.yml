@@ -54,8 +54,6 @@ jobs:
     displayName: 'Upload Files to Blob Storage'
     env:
       AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
-      AZURE_STORAGE_CONNECTION_STRING: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_STORAGE_CONNECTION_STRING'])
-      AZURE_BLOB_CONTAINER_NAME: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_BLOB_CONTAINER_NAME'])
 
 - job: InsertIntoDatabase
   displayName: "Process Data"
@@ -68,6 +66,18 @@ jobs:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.x'
+   # ✅ Install ODBC Driver 18 for SQL Server
+  - script: |
+      sudo su
+      sudo apt-get update
+      sudo ACCEPT_EULA=Y apt-get install -y curl gnupg2
+      curl https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+      sudo add-apt-repository "$(curl -fsSL https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list)"
+      sudo apt-get update
+      sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
+      sudo ACCEPT_EULA=Y apt-get install -y unixodbc-dev
+      sudo apt-get install -y libunwind8
+    displayName: 'Install ODBC Driver 18 for SQL Server'
   - script: pip install -r requirements.txt
     displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
@@ -94,7 +104,7 @@ jobs:
   - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
     displayName: 'Generate Release Note'
     env:
-      AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
+      AZURE_STORAGE_CONNECTION_STRING: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_STORAGE_CONNECTION_STRING'])
       AZURE_SAS_RELEASE_NOTE: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_RELEASE_NOTE'])
       AZURE_RELEASE_NOTES_CONTAINER: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_RELEASE_NOTES_CONTAINER'])
 
