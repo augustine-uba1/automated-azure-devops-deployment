@@ -9,6 +9,8 @@ jobs:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Ensure dependencies are installed
+    displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/smoke_test.py
     displayName: 'Run Smoke Test on Database'
 
@@ -19,6 +21,11 @@ jobs:
   steps:
   - checkout: self
   - download: current
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Install dependencies
+    displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/upload_to_blob.py
     displayName: 'Upload Files to Blob Storage'
 
@@ -30,6 +37,11 @@ jobs:
   steps:
   - checkout: self
   - download: current
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Install dependencies
+    displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
     displayName: 'Read Blob & Insert Data into Database'
 
@@ -41,6 +53,11 @@ jobs:
   steps:
   - checkout: self
   - download: current
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Install dependencies
+    displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
     displayName: 'Generate Release Note'
   - script: python $(Pipeline.Workspace)/deployment-scripts/send_email.py
