@@ -1,21 +1,26 @@
 jobs:
-- job: CheckDatabase
-  displayName: "Smoke Test"
+- job: SetEnvironmentVariables
+  displayName: "Set Global Environment Variables"
   pool:
     vmImage: 'ubuntu-latest'
   steps:
   - checkout: self
-  - download: current  # ✅ Download artifacts from the build pipeline
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.x'
-  - script: pip install -r requirements.txt  # ✅ Ensure dependencies are installed
-    displayName: 'Install Dependencies'
-  - script: python $(Pipeline.Workspace)/deployment-scripts/smoke_test.py
-    displayName: 'Run Smoke Test on Database'
-
-- job: UploadToBlob
-  displayName: "Upload Files"
+  - script: |
+      echo "##vso[task.setvariable variable=AZURE_SAS_TOKEN;isOutput=true]$(AZURE_SAS_TOKEN)"
+      echo "##vso[task.setvariable variable=AZURE_STORAGE_CONNECTION_STRING;isOutput=true]$(AZURE_STORAGE_CONNECTION_STRING)"
+      echo "##vso[task.setvariable variable=AZURE_SAS_RELEASE_NOTE;isOutput=true]$(AZURE_SAS_RELEASE_NOTE)"
+      echo "##vso[task.setvariable variable=AZURE_BLOB_CONTAINER_NAME;isOutput=true]$(AZURE_BLOB_CONTAINER_NAME)"
+      echo "##vso[task.setvariable variable=AZURE_RELEASE_NOTES_CONTAINER;isOutput=true]$(AZURE_RELEASE_NOTES_CONTAINER)"
+      echo "##vso[task.setvariable variable=AZURE_BLOB_ACCOUNT_NAME;isOutput=true]$(AZURE_BLOB_ACCOUNT_NAME)"
+      echo "##vso[task.setvariable variable=DB_SERVER;isOutput=true]$(DB_SERVER)"
+      echo "##vso[task.setvariable variable=DB_NAME;isOutput=true]$(DB_NAME)"
+      echo "##vso[task.setvariable variable=DB_USER;isOutput=true]$(DB_USER)"
+      echo "##vso[task.setvariable variable=DB_PASSWORD;isOutput=true;isSecret=true]$(DB_PASSWORD)"
+    displayName: 'Set Environment Variables Globally'
+  name: SetEnv  # ✅ Assign a job name so outputs can be referenced
+- job: SmokeTest
+  displayName: "Run Smoke Test"
+  dependsOn: SetEnvironmentVariables
   pool:
     vmImage: 'ubuntu-latest'
   steps:
@@ -24,10 +29,32 @@ jobs:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.x'
-  - script: pip install -r requirements.txt  # ✅ Install dependencies
+  - script: pip install -r requirements.txt
+    displayName: 'Install Dependencies'
+  - script: python $(Pipeline.Workspace)/deployment-scripts/smoke_test.py
+    displayName: 'Run Smoke Test on Database'
+    env:
+      AZURE_SAS_TOKEN: $(SetEnv.AZURE_SAS_TOKEN)
+
+- job: UploadToBlob
+  displayName: "Upload Files"
+  dependsOn: SetEnvironmentVariables
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+  - download: current
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt
     displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/upload_to_blob.py
     displayName: 'Upload Files to Blob Storage'
+    env:
+      AZURE_SAS_TOKEN: $(SetEnv.AZURE_SAS_TOKEN)
+      AZURE_STORAGE_CONNECTION_STRING: $(SetEnv.AZURE_STORAGE_CONNECTION_STRING)
+      AZURE_BLOB_CONTAINER_NAME: $(SetEnv.AZURE_BLOB_CONTAINER_NAME)
 
 - job: InsertIntoDatabase
   displayName: "Process Data"
@@ -40,10 +67,15 @@ jobs:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.x'
-  - script: pip install -r requirements.txt  # ✅ Install dependencies
+  - script: pip install -r requirements.txt
     displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
     displayName: 'Read Blob & Insert Data into Database'
+    env:
+      DB_SERVER: $(SetEnv.DB_SERVER)
+      DB_NAME: $(SetEnv.DB_NAME)
+      DB_USER: $(SetEnv.DB_USER)
+      DB_PASSWORD: $(SetEnv.DB_PASSWORD)
 
 - job: GenerateReleaseNote
   displayName: "Generate Release Note & Notify"
@@ -56,9 +88,13 @@ jobs:
   - task: UsePythonVersion@0
     inputs:
       versionSpec: '3.x'
-  - script: pip install -r requirements.txt  # ✅ Install dependencies
+  - script: pip install -r requirements.txt
     displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
     displayName: 'Generate Release Note'
+    env:
+      AZURE_SAS_TOKEN: $(SetEnv.AZURE_SAS_TOKEN)
+      AZURE_SAS_RELEASE_NOTE: $(SetEnv.AZURE_SAS_RELEASE_NOTE)
+      AZURE_RELEASE_NOTES_CONTAINER: $(SetEnv.AZURE_RELEASE_NOTES_CONTAINER)
   - script: python $(Pipeline.Workspace)/deployment-scripts/send_email.py
     displayName: 'Send Email Notification'
