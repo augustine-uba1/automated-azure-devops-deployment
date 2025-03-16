@@ -1,27 +1,10 @@
-- job: ExtractDeploymentPackage
-  displayName: "Extract Deployment Package"
+jobs:
+- job: SetEnvironmentVariables
+  displayName: "Set Global Environment Variables"
   pool:
     vmImage: 'ubuntu-latest'
   steps:
   - checkout: self
-
-  # Download the ZIP artifact
-  - download: current
-    artifact: DeploymentPackage
-
-  # Extract the deployment package
-  - script: |
-      mkdir -p $(Pipeline.Workspace)/deployment
-      unzip $(Pipeline.Workspace)/DeploymentPackage/deployment_package_*.zip -d $(Pipeline.Workspace)/deployment
-      ls -R $(Pipeline.Workspace)/deployment  # Debugging: List extracted contents
-    displayName: 'Extract Deployment Package'
-
-- job: SetEnvironmentVariables
-  displayName: "Set Global Environment Variables"
-  dependsOn: ExtractDeploymentPackage  # Ensure extraction happens first
-  pool:
-    vmImage: 'ubuntu-latest'
-  steps:
   - script: |
       echo "##vso[task.setvariable variable=AZURE_SAS_TOKEN;isOutput=true]$(AZURE_SAS_TOKEN)"
       echo "##vso[task.setvariable variable=AZURE_STORAGE_CONNECTION_STRING;isOutput=true]$(AZURE_STORAGE_CONNECTION_STRING)"
@@ -33,15 +16,36 @@
       echo "##vso[task.setvariable variable=DB_NAME;isOutput=true]$(DB_NAME)"
       echo "##vso[task.setvariable variable=DB_USER;isOutput=true]$(DB_USER)"
       echo "##vso[task.setvariable variable=DB_PASSWORD;isOutput=true;isSecret=true]$(DB_PASSWORD)"
-    name: SetEnvStep  # This allows later jobs to reference these variables
+    name: SetEnvStep  # Defines the step name, so other jobs can reference its output
     displayName: 'Set Environment Variables Globally'
+
+- job: ExtractDeploymentPackage
+  displayName: "Extract Deployment Package"
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+
+  #  Download the zip artifact
+  - download: current
+    artifact: DeploymentPackage
+
+  #  Extract the deployment package
+  - script: |
+      mkdir -p $(Pipeline.Workspace)/deployment
+      unzip $(Pipeline.Workspace)/DeploymentPackage/deployment_package_*.zip -d $(Pipeline.Workspace)/deployment
+      ls -R $(Pipeline.Workspace)/deployment  #  Debugging: List extracted contents
+    displayName: 'Extract Deployment Package'
 
 # - job: SmokeTest
 #   displayName: "Run Smoke Test"
-#   dependsOn: SetEnvironmentVariables
+#   dependsOn: ExtractDeploymentPackage
 #   pool:
 #     vmImage: 'ubuntu-latest'
 #   steps:
+#   - task: UsePythonVersion@0
+#     inputs:
+#       versionSpec: '3.x'
 #   - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
 #     displayName: 'Install Dependencies'
 #   - script: python $(Pipeline.Workspace)/deployment/scripts/smoke_test.py
@@ -50,11 +54,14 @@
 #       AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
 
 - job: UploadToBlob
-  displayName: "Upload Files to Blob Storage"
+  displayName: "Upload Files"
   dependsOn: SmokeTest
   pool:
     vmImage: 'ubuntu-latest'
   steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
   - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
     displayName: 'Install Dependencies'
   - script: python $(Pipeline.Workspace)/deployment/scripts/upload_to_blob.py
@@ -63,7 +70,7 @@
       AZURE_SAS_TOKEN: $(dependencies.SetEnvironmentVariables.outputs['SetEnvStep.AZURE_SAS_TOKEN'])
 
 # - job: InsertIntoDatabase
-#   displayName: "Process Data and Insert into Database"
+#   displayName: "Process Data"
 #   dependsOn: UploadToBlob
 #   pool:
 #     vmImage: 'ubuntu-latest'
@@ -71,8 +78,8 @@
 #   - task: UsePythonVersion@0
 #     inputs:
 #       versionSpec: '3.x'
-  
-#   # Install ODBC Driver for SQL Server
+
+#   #  Install ODBC Driver 18 for SQL Server
 #   - script: |
 #       sudo su
 #       sudo apt-get update
@@ -83,11 +90,10 @@
 #       sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
 #       sudo ACCEPT_EULA=Y apt-get install -y unixodbc-dev
 #       sudo apt-get install -y libunwind8
-#     displayName: 'Install ODBC Driver for SQL Server'
+#     displayName: 'Install ODBC Driver 18 for SQL Server'
 
 #   - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
 #     displayName: 'Install Dependencies'
-
 #   - script: python $(Pipeline.Workspace)/deployment/scripts/process_data.py
 #     displayName: 'Read Blob & Insert Data into Database'
 #     env:
@@ -102,9 +108,11 @@
   pool:
     vmImage: 'ubuntu-latest'
   steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
   - script: pip install -r $(Pipeline.Workspace)/deployment/requirements.txt
     displayName: 'Install Dependencies'
-
   - script: python $(Pipeline.Workspace)/deployment/scripts/generate_release_note.py
     displayName: 'Generate Release Note'
     env:
