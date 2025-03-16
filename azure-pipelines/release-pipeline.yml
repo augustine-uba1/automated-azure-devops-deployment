@@ -1,51 +1,64 @@
-stages:
-- stage: SmokeTest
-  jobs:
-  - job: CheckDatabase
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: self
-    - download: current
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.x'
-    - script: python $(Pipeline.Workspace)/deployment-scripts/smoke_test.py
-      displayName: 'Run Smoke Test on Database'
+jobs:
+- job: CheckDatabase
+  displayName: "Smoke Test"
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+  - download: current  # ✅ Download artifacts from the build pipeline
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Ensure dependencies are installed
+    displayName: 'Install Dependencies'
+  - script: python $(Pipeline.Workspace)/deployment-scripts/smoke_test.py
+    displayName: 'Run Smoke Test on Database'
 
-- stage: UploadFiles
-  jobs:
-  - job: UploadToBlob
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: self
-    - download: current
-    - script: python $(Pipeline.Workspace)/deployment-scripts/upload_to_blob.py
-      displayName: 'Upload Files to Blob Storage'
+- job: UploadToBlob
+  displayName: "Upload Files"
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+  - download: current
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Install dependencies
+    displayName: 'Install Dependencies'
+  - script: python $(Pipeline.Workspace)/deployment-scripts/upload_to_blob.py
+    displayName: 'Upload Files to Blob Storage'
 
-- stage: ProcessData
-  dependsOn: UploadFiles
-  jobs:
-  - job: InsertIntoDatabase
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: self
-    - download: current
-    - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
-      displayName: 'Read Blob & Insert Data into Database'
+- job: InsertIntoDatabase
+  displayName: "Process Data"
+  dependsOn: UploadToBlob
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+  - download: current
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Install dependencies
+    displayName: 'Install Dependencies'
+  - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
+    displayName: 'Read Blob & Insert Data into Database'
 
-- stage: ReleaseNote
-  dependsOn: ProcessData
-  jobs:
-  - job: GenerateNote
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-    - checkout: self
-    - download: current
-    - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
-      displayName: 'Generate Release Note'
-    - script: python $(Pipeline.Workspace)/deployment-scripts/send_email.py
-      displayName: 'Send Email Notification'
+- job: GenerateReleaseNote
+  displayName: "Generate Release Note & Notify"
+  dependsOn: InsertIntoDatabase
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - checkout: self
+  - download: current
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '3.x'
+  - script: pip install -r requirements.txt  # ✅ Install dependencies
+    displayName: 'Install Dependencies'
+  - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
+    displayName: 'Generate Release Note'
+  - script: python $(Pipeline.Workspace)/deployment-scripts/send_email.py
+    displayName: 'Send Email Notification'
