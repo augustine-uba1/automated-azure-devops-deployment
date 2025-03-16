@@ -1,14 +1,3 @@
-trigger: none  # Manual trigger, but will be triggered by the build pipeline
-
-resources:
-  pipelines:
-    - pipeline: buildPipeline  # Name of the build pipeline resource
-      source: augustine-uba1.automated-azure-devops-deployment  # Name of the build pipeline
-      trigger:
-        branches:
-          include:
-            - main  # Trigger when the build pipeline runs on 'main'
-
 stages:
 - stage: SmokeTest
   jobs:
@@ -17,7 +6,7 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
-    - download: buildPipeline  # Download the artifact from the build pipeline
+    - download: current
     - task: UsePythonVersion@0
       inputs:
         versionSpec: '3.x'
@@ -31,7 +20,7 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
-    - download: buildPipeline  # Get scripts from the build pipeline
+    - download: current
     - script: python $(Pipeline.Workspace)/deployment-scripts/upload_to_blob.py
       displayName: 'Upload Files to Blob Storage'
 
@@ -43,7 +32,7 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
-    - download: buildPipeline
+    - download: current
     - script: python $(Pipeline.Workspace)/deployment-scripts/process_data.py
       displayName: 'Read Blob & Insert Data into Database'
 
@@ -55,7 +44,7 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - checkout: self
-    - download: buildPipeline
+    - download: current
     - script: python $(Pipeline.Workspace)/deployment-scripts/generate_release_note.py
       displayName: 'Generate Release Note'
     - script: python $(Pipeline.Workspace)/deployment-scripts/send_email.py
